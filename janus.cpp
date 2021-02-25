@@ -1357,9 +1357,9 @@ int main(int argc, char *argv[]){
   //////////////////////////main loop///////////////////////////////
   for(int s=-nstep_eq;s<nstep;s++){
     //add by kiyoshiro{
-    if(s==-9900){//search_radiusを変更する
+    if(s==-900){//search_radiusを変更する
       for(PS::S32 kk=0;kk<n_loc;kk++){
-	system_janus[kk].search_radius=4.5;
+	system_janus[kk].search_radius=3.5;
       }
     }
     //output file start
