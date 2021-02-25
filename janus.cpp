@@ -1159,8 +1159,8 @@ int main(int argc, char *argv[]){
   PS::S32 n_group_limit = 64;
   PS::S32 nstep      = 50000;//300000;
   PS::S32 nstep_eq   = 1000;//10000;
-  PS::S32 nstep_snp  = 100;
-  PS::S32 nstep_diag = 100;
+  PS::S32 nstep_snp  = 1000000000;
+  PS::S32 nstep_diag = 1000000000;
   //  std::cout<<PS::Comm::getRank()<<std::endl;
   //add by kiyoshiro{
   //  PS::S32 fprank = PS::Comm::getRank();
@@ -1273,6 +1273,7 @@ int main(int argc, char *argv[]){
 
   std::ofstream fout_eng;
   std::ofstream fout_tcal;
+
   if(PS::Comm::getRank() == 0){
     char sout_de[1024];
     char sout_tcal[1024];
@@ -1354,6 +1355,13 @@ int main(int argc, char *argv[]){
   //}
   //#endif
 
+
+
+
+  std::ofstream fout_temperature("temperature.dat");
+
+
+  
   //////////////////////////main loop///////////////////////////////
   for(int s=-nstep_eq;s<nstep;s++){
     //add by kiyoshiro{
@@ -1363,7 +1371,7 @@ int main(int argc, char *argv[]){
       }
     }
     //output file start
-    if(s % 1000 == 0){
+    if(s % 100 == 0 && s >= 0){
       //        if(s == 1){
 
       if(rank == 0){ 
@@ -1460,7 +1468,12 @@ int main(int argc, char *argv[]){
 
     //if(!isInitialized && s == 0){
       CalcEnergy(system_janus, Etot0, Etra0, Erot0, Epot0);
-      if(PS::Comm::getRank() == 0) fprintf(stderr,"step = %d, Etot0 = %lf, Epot0 = %lf, Etra0 = %lf, temperature = %lf\n",s,Etot0,Epot0,Etra0,Erot0);
+      if(PS::Comm::getRank() == 0){
+	fprintf(stderr,"step = %d, Etot0 = %lf, Epot0 = %lf, Etra0 = %lf, temperature = %lf\n",s,Etot0,Epot0,Etra0,Erot0);
+	if(s>=0){
+	  fout_temperature<<Erot0<<std::endl;
+	}
+      }
       isInitialized = true;
       //    }
 
@@ -1525,15 +1538,17 @@ int main(int argc, char *argv[]){
   MPI::COMM_WORLD.Allreduce(&pressure_loc.y, &pressure_gro.y, 1, PS::GetDataType<PS::F64>(), MPI::SUM);
   MPI::COMM_WORLD.Allreduce(&pressure_loc.z, &pressure_gro.z, 1, PS::GetDataType<PS::F64>(), MPI::SUM);
 
-  if(rank == 0){
-    fpo3 = fopen( "pressure.dat" , "a" );
-    if( fpo3 == NULL ) {
-      printf( "ファイルオープンエラー\n" );
-      return -1;
+  if(s >= 0){
+    if(rank == 0){
+      fpo3 = fopen( "pressure.dat" , "a" );
+      if( fpo3 == NULL ) {
+	printf( "ファイルオープンエラー\n" );
+	return -1;
+      }
+      
+      fprintf(fpo3,"%lf %lf %lf\n",pressure_gro.x,pressure_gro.y,pressure_gro.z);
+      fclose(fpo3);
     }
-
-    fprintf(fpo3,"%lf %lf %lf\n",pressure_gro.x,pressure_gro.y,pressure_gro.z);
-    fclose(fpo3);
   }
 #endif
 
@@ -1579,7 +1594,8 @@ int main(int argc, char *argv[]){
     //}
     */
   }
-
+  
+  fout_temperature.close();
   const PS::TimeProfile tp = system_janus.getTimeProfile() + dinfo.getTimeProfile() + tree_janus.getTimeProfile();      
   
   printf("TotalTime= %lf\n\n",tp.getTotalTime() + time_integ + time_intra);
